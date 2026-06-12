@@ -307,6 +307,15 @@
   }
   @keyframes annot-blink { 50% { opacity: 0; } }
 
+  /* ---------- Scale-to-fit stage ----------
+     The page renders at its native 1640px design width inside #scaler, which
+     is then transform-scaled down to fit whatever width it's shown in (the
+     browser window or the embedding iframe) — so the whole layout shrinks as
+     one block, exactly like the file-preview miniature, instead of the
+     columns compressing. Never upscales past native; centres when it fits. */
+  #stage { width: 100%; overflow: hidden; }
+  #scaler { width: 1640px; transform-origin: top left; }
+
   /* ---------- Muted (display-only) controls ---------- */
   /* Search, Filter/Customise, the primary button and the row edit button are
      inert in the embed: non-interactive, no hover. */
@@ -321,6 +330,8 @@
 </style>
 </head>
 <body>
+  <div id="stage">
+  <div id="scaler">
   <div class="page">
     <!-- Breadcrumb -->
     <nav class="breadcrumb">
@@ -397,6 +408,8 @@
         </table>
       </div>
     </div>
+  </div>
+  </div>
   </div>
 
 <script>
@@ -660,10 +673,23 @@
     });
   }
 
-  fitColumns();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitColumns);
+  // Scale the whole 1640px design down to fit the available width.
+  function scaleStage() {
+    var stage = document.getElementById('stage');
+    var scaler = document.getElementById('scaler');
+    if (!stage || !scaler) return;
+    var DESIGN_W = 1640;
+    var s = Math.min(1, stage.clientWidth / DESIGN_W);
+    scaler.style.transform = 'scale(' + s + ')';
+    scaler.style.marginLeft = s >= 1 ? Math.max(0, (stage.clientWidth - DESIGN_W) / 2) + 'px' : '0';
+    stage.style.height = Math.ceil(scaler.offsetHeight * s) + 'px';
+  }
+
+  function relayout() { fitColumns(); scaleStage(); }
+  relayout();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
   var fitTimer;
-  window.addEventListener('resize', function () { clearTimeout(fitTimer); fitTimer = setTimeout(fitColumns, 150); });
+  window.addEventListener('resize', function () { clearTimeout(fitTimer); fitTimer = setTimeout(relayout, 150); });
 
 
   var animating = false;
